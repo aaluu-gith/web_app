@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Customizable Study Planner</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #efddd2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            padding: 20px;
+            justify-content: space-between;
+        }
+        .task-list, .schedule, .progress, .pomodoro {
+            width: 30%;
+            margin-right: 20px;
+        }
+
+        /* Task List Styles */
+        .task-item, .schedule-item {
+            background-color: #fff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .task-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        /* Progress Bar Styles */
+        .progress-bar {
+            height: 20px;
+            width: 100%;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .progress-bar div {
+            height: 100%;
+            width: 0%; /* Adjust dynamically */
+            background-color: #efddd2;
+            border-radius: 5px;
+        }
+
+        /* Pomodoro Timer Styles */
+        .pomodoro {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .pomodoro button {
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            background-color: #efddd2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* Focus Mode Styles */
+        .focus-mode {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .schedule-table th, .schedule-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+            cursor: pointer;
+        }
+        .schedule-table td:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+        }
+        .task-entry {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .task-entry input, .task-entry select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .pomodoro-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .setting-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .setting-group input, 
+        .setting-group select {
+            width: 60%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>My Advanced Study Planner</h1>
+</header>
+
+<div class="container">
+    <!-- Task List -->
+    <div class="task-list">
+        <h2>Your Tasks</h2>
+        <ul id="task-list">
+            <!-- Task items will be dynamically added here -->
+        </ul>
+        <input type="text" id="new-task" placeholder="Add new task..." />
+        <select id="priority">
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
+        <button onclick="addTask()">Add Task</button>
+    </div>
+
+    <!-- Schedule -->
+    <div class="schedule">
+        <h3>Weekly Schedule</h3>
+        <table class="schedule-table">
+            <tr>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+                <th>Sun</th>
+            </tr>
+            {% for row in range(5) %}
+            <tr>
+                <td id="mon-{{ row }}" onclick="editSchedule('Mon', {{ row }})"></td>
+                <td id="tue-{{ row }}" onclick="editSchedule('Tue', {{ row }})"></td>
+                <td id="wed-{{ row }}" onclick="editSchedule('Wed', {{ row }})"></td>
+                <td id="thu-{{ row }}" onclick="editSchedule('Thu', {{ row }})"></td>
+                <td id="fri-{{ row }}" onclick="editSchedule('Fri', {{ row }})"></td>
+                <td id="sat-{{ row }}" onclick="editSchedule('Sat', {{ row }})"></td>
+                <td id="sun-{{ row }}" onclick="editSchedule('Sun', {{ row }})"></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Progress Tracker -->
+    <div class="progress">
+        <h2>Progress Tracker</h2>
+        <div class="progress-bar">
+            <div id="progress"></div>
+        </div>
+        <p id="progress-text">Completed: 0%</p>
+    </div>
+
+    <!-- Pomodoro Timer -->
+    <div class="pomodoro">
+        <h3>Pomodoro Timer</h3>
+        <div class="pomodoro-settings">
+            <div class="setting-group">
+                <label for="pomodoro-duration">Work Duration (min):</label>
+                <input type="number" id="pomodoro-duration" value="25" min="1" max="60" />
+            </div>
+            <div class="setting-group">
+                <label for="break-duration">Break Duration (min):</label>
+                <select id="break-duration">
+                    <option value="5">5 Minutes</option>
+                    <option value="10" selected>10 Minutes</option>
+                    <option value="15">15 Minutes</option>
+                    <option value="20">20 Minutes</option>
+                </select>
+            </div>
+        </div>
+        <button id="pomodoro-button" onclick="startPomodoro()">Start Pomodoro</button>
+        <button id="pomodoro-reset-button" onclick="resetPomodoro()" disabled>Reset Pomodoro</button>
+        <p id="pomodoro-status">Time Remaining: 25:00</p>
+    </div>
+</div>
+
+<!-- Focus Mode -->
+<div class="focus-mode">
+    <button onclick="startFocusMode()">Start Focus Mode</button>
+    <p id="focus-message">Keep focusing! Don't get distracted!</p>
+</div>
+
+<!-- Schedule Edit Modal -->
+<div id="schedule-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeScheduleModal()">&times;</span>
+        <h2 id="modal-day-title">Edit Schedule</h2>
+        <div id="task-entries">
+            <div class="task-entry">
+                <input type="text" placeholder="Task description" class="task-input">
+                <select class="task-priority">
+                    <option value="high">High Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="low">Low Priority</option>
+                </select>
+                <input type="time" class="task-time">
+            </div>
+        </div>
+        <button onclick="addTaskEntry()">Add Task</button>
+        <button onclick="saveSchedule()">Save</button>
+    </div>
+</div>
+
+<script>
+    let taskList = [];
+    let completedTasks = 0;
+    let pomodoroStatus = 'paused';
+    let pomodoroInterval;
+    let focusModeStatus = false;
+
+    let workDuration = 25 * 60;  // Default 25 minutes
+    let breakDuration = 10 * 60;  // Default 10 minutes
+    let currentPomodoroPhase = 'work';
+
+    document.getElementById('pomodoro-duration').addEventListener('change', (e) => {
+        workDuration = parseInt(e.target.value) * 60;
+    });
+
+    document.getElementById('break-duration').addEventListener('change', (e) => {
+        breakDuration = parseInt(e.target.value) * 60;
+    });
+
+    function startPomodoro() {
+        const pomodoroButton = document.getElementById('pomodoro-button');
+        const resetButton = document.getElementById('pomodoro-reset-button');
+        const statusText = document.getElementById('pomodoro-status');
+
+        if (pomodoroStatus === 'paused') {
+            pomodoroStatus = 'running';
+            pomodoroButton.textContent = 'Pause';
+            resetButton.disabled = false;
+
+            pomodoroInterval = setInterval(runPomodoro, 1000);
+        } else if (pomodoroStatus === 'running') {
+            pomodoroStatus = 'paused';
+            pomodoroButton.textContent = 'Resume';
+            clearInterval(pomodoroInterval);
+        }
+    }
+
+    function runPomodoro() {
+        const statusText = document.getElementById('pomodoro-status');
+        const pomodoroButton = document.getElementById('pomodoro-button');
+
+        if (currentPomodoroPhase === 'work') {
+            workDuration--;
+            if (workDuration <= 0) {
+                // Switch to break
+                currentPomodoroPhase = 'break';
+                workDuration = parseInt(document.getElementById('pomodoro-duration').value) * 60;
+                breakDuration = parseInt(document.getElementById('break-duration').value) * 60;
+            }
+        } else {
+            breakDuration--;
+            if (breakDuration <= 0) {
+                // Switch back to work
+                currentPomodoroPhase = 'work';
+                breakDuration = parseInt(document.getElementById('break-duration').value) * 60;
+            }
+        }
+
+        const minutes = Math.floor(
+            currentPomodoroPhase === 'work' ? workDuration : breakDuration
+        ) / 60;
+        const seconds = Math.floor(
+            currentPomodoroPhase === 'work' ? workDuration : breakDuration
+        ) % 60;
+
+        // Ensure two-digit formatting for minutes and seconds
+        const formattedMinutes = Math.floor(minutes).toString().padStart(2, '0');
+        const formattedSeconds = seconds.toString().padStart(2, '0');
+
+        statusText.textContent = `${currentPomodoroPhase === 'work' ? 'Work' : 'Break'} Time: ${formattedMinutes}:${formattedSeconds}`;
+
+        if (workDuration <= 0 || breakDuration <= 0) {
+            resetPomodoro();
+        }
+    }
+
+    function resetPomodoro() {
+        clearInterval(pomodoroInterval);
+        const pomodoroButton = document.getElementById('pomodoro-button');
+        const resetButton = document.getElementById('pomodoro-reset-button');
+        const statusText = document.getElementById('pomodoro-status');
+
+        pomodoroStatus = 'paused';
+        currentPomodoroPhase = 'work';
+        workDuration = parseInt(document.getElementById('pomodoro-duration').value) * 60;
+        breakDuration = parseInt(document.getElementById('break-duration').value) * 60;
+
+        pomodoroButton.textContent = 'Start Pomodoro';
+        resetButton.disabled = true;
+        statusText.textContent = `Time Remaining: ${workDuration / 60}:00`;
+    }
+
+    // Add task function
+    function addTask() {
+        const taskInput = document.getElementById("new-task");
+        const prioritySelect = document.getElementById("priority");
+        const taskName = taskInput.value.trim();
+        const priority = prioritySelect.value;
+
+        if (taskName) {
+            taskList.push({ name: taskName, completed: false, priority: priority });
+            taskInput.value = "";  // Clear input field
+            renderTasks();
+        }
+    }
+
+    // Render tasks
+    function renderTasks() {
+        const taskListElement = document.getElementById("task-list");
+        taskListElement.innerHTML = ""; // Clear current list
+
+        taskList.forEach((task, index) => {
+            const taskItem = document.createElement("li");
+            taskItem.className = `task-item ${task.priority}`;
+            taskItem.innerHTML = `
+                <input type="checkbox" onclick="toggleTask(${index})" ${task.completed ? "checked" : ""}>
+                ${task.name} (${task.priority})
+            `;
+            taskListElement.appendChild(taskItem);
+        });
+
+        updateProgress();
+    }
+
+    // Toggle task completion
+    function toggleTask(index) {
+        taskList[index].completed = !taskList[index].completed;
+        renderTasks();
+    }
+
+    // Update progress bar
+    function updateProgress() {
+        completedTasks = taskList.filter(task => task.completed).length;
+        const progressPercentage = (completedTasks / taskList.length) * 100;
+        document.getElementById("progress").style.width = `${progressPercentage}%`;
+        document.getElementById("progress-text").textContent = `Completed: ${Math.round(progressPercentage)}%`;
+    }
+
+    function editSchedule(day, row) {
+        currentEditDay = day;
+        currentEditRow = row;
+        const modal = document.getElementById('schedule-modal');
+        const dayTitle = document.getElementById('modal-day-title');
+        const taskEntries = document.getElementById('task-entries');
+
+        dayTitle.textContent = `Edit Schedule for ${day}`;
+        modal.style.display = 'block';
+
+        // Clear previous entries
+        taskEntries.innerHTML = '';
+
+        // If tasks exist for this day and row, populate them
+        const existingTasks = weeklySchedule[day][row] || [];
+        existingTasks.forEach(task => {
+            addTaskEntry(task);
+        });
+    }
+
+    function addTaskEntry(task = null) {
+        const taskEntries = document.getElementById('task-entries');
+        const taskEntry = document.createElement('div');
+        taskEntry.classList.add('task-entry');
+        
+        const taskInput = document.createElement('input');
+        taskInput.type = 'text';
+        taskInput.placeholder = 'Task description';
+        taskInput.classList.add('task-input');
+        
+        const prioritySelect = document.createElement('select');
+        prioritySelect.classList.add('task-priority');
+        prioritySelect.innerHTML = `
+            <option value="high">High Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="low">Low Priority</option>
+        `;
+        
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.classList.add('task-time');
+
+        // If task is provided, populate fields
+        if (task) {
+            taskInput.value = task.description || '';
+            prioritySelect.value = task.priority || 'medium';
+            timeInput.value = task.time || '';
+        }
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '🗑️';
+        deleteButton.onclick = () => taskEntry.remove();
+
+        taskEntry.appendChild(taskInput);
+        taskEntry.appendChild(prioritySelect);
+        taskEntry.appendChild(timeInput);
+        taskEntry.appendChild(deleteButton);
+
+        taskEntries.appendChild(taskEntry);
+    }
+
+    function saveSchedule() {
+        const taskEntries = document.querySelectorAll('.task-entry');
+        const tasks = [];
+
+        taskEntries.forEach(entry => {
+            const description = entry.querySelector('.task-input').value.trim();
+            const priority = entry.querySelector('.task-priority').value;
+            const time = entry.querySelector('.task-time').value;
+
+            if (description) {
+                tasks.push({ description, priority, time });
+            }
+        });
+
+        // Update schedule
+        weeklySchedule[currentEditDay][currentEditRow] = tasks;
+
+        // Update UI
+        const cellId = `${currentEditDay.toLowerCase()}-${currentEditRow}`;
+        const cell = document.getElementById(cellId);
+        cell.innerHTML = tasks.map(task => 
+            `<div class="task-pill ${task.priority}">${task.description}</div>`
+        ).join('');
+
+        // Close modal
+        document.getElementById('schedule-modal').style.display = 'none';
+    }
+
+    function closeScheduleModal() {
+        document.getElementById('schedule-modal').style.display = 'none';
+    }
+
+    // Focus Mode function
+    function startFocusMode() {
+        if (focusModeStatus) {
+            alert("Focus Mode Deactivated! Stay on task!");
+            focusModeStatus = false;
+            document.getElementById("focus-message").textContent = "Stay focused! Don't get distracted!";
+        } else {
+            alert("Focus Mode Activated! Focus and avoid distractions.");
+            focusModeStatus = true;
+            document.getElementById("focus-message").textContent = "Keep focusing! Don't get distracted!";
+        }
+    }
+</script>
+
+</body>
+</html>
+
+{% endblock %}

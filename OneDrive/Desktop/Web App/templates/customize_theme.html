@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Customize Theme{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .theme-container {
+        max-width: 600px;
+        margin: 30px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+        text-align: left;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    input[type="color"] {
+        height: 40px;
+        padding: 2px;
+    }
+
+    .preview {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .preview-text {
+        margin: 10px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="theme-container">
+    <h1>Customize Theme</h1>
+    
+    <form id="themeForm" method="POST">
+        <div class="form-group">
+            <label for="color">Theme Color:</label>
+            <input type="color" id="color" name="color" value="{{ theme_data.color }}">
+        </div>
+
+        <div class="form-group">
+            <label for="background_color">Background Color:</label>
+            <input type="color" id="background_color" name="background_color" value="{{ theme_data.background_color }}">
+        </div>
+
+        <div class="form-group">
+            <label for="text_color">Text Color:</label>
+            <input type="color" id="text_color" name="text_color" value="{{ theme_data.text_color }}">
+        </div>
+
+        <div class="form-group">
+            <label for="button_color">Button Color:</label>
+            <input type="color" id="button_color" name="button_color" value="{{ theme_data.button_color }}">
+        </div>
+
+        <div class="form-group">
+            <label for="button_hover_color">Button Hover Color:</label>
+            <input type="color" id="button_hover_color" name="button_hover_color" value="{{ theme_data.button_hover_color }}">
+        </div>
+
+        <div class="form-group">
+            <label for="button_text_color">Button Text Color:</label>
+            <input type="color" id="button_text_color" name="button_text_color" value="{{ theme_data.button_text_color }}">
+        </div>
+
+        <div class="form-group">
+            <label for="font">Font Family:</label>
+            <select id="font" name="font">
+                <option value="Arial" {% if theme_data.font == 'Arial' %}selected{% endif %}>Arial</option>
+                <option value="Helvetica" {% if theme_data.font == 'Helvetica' %}selected{% endif %}>Helvetica</option>
+                <option value="Times New Roman" {% if theme_data.font == 'Times New Roman' %}selected{% endif %}>Times New Roman</option>
+                <option value="Georgia" {% if theme_data.font == 'Georgia' %}selected{% endif %}>Georgia</option>
+                <option value="Verdana" {% if theme_data.font == 'Verdana' %}selected{% endif %}>Verdana</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="size">Font Size (px):</label>
+            <input type="number" id="size" name="size" value="{{ theme_data.size }}" min="12" max="24">
+        </div>
+
+        <div class="preview">
+            <h3>Preview</h3>
+            <p class="preview-text">This is how your text will look.</p>
+            <button type="button" class="preview-button">Preview Button</button>
+        </div>
+
+        <div class="button-group">
+            <button type="submit">Save Theme</button>
+            <a href="/" class="btn">Back to Home</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('themeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {};
+    for (let [key, value] of formData.entries()) {
+        data[key] = value;
+    }
+
+    fetch('/customize_theme', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = '/';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+// Live preview functionality
+const previewText = document.querySelector('.preview-text');
+const previewButton = document.querySelector('.preview-button');
+const preview = document.querySelector('.preview');
+
+function updatePreview() {
+    const font = document.getElementById('font').value;
+    const size = document.getElementById('size').value;
+    const textColor = document.getElementById('text_color').value;
+    const backgroundColor = document.getElementById('background_color').value;
+    const buttonColor = document.getElementById('button_color').value;
+    const buttonTextColor = document.getElementById('button_text_color').value;
+
+    preview.style.backgroundColor = backgroundColor;
+    preview.style.color = textColor;
+    preview.style.fontFamily = font;
+    preview.style.fontSize = size + 'px';
+    
+    previewButton.style.backgroundColor = buttonColor;
+    previewButton.style.color = buttonTextColor;
+}
+
+// Add event listeners to all inputs for live preview
+document.querySelectorAll('input, select').forEach(input => {
+    input.addEventListener('input', updatePreview);
+});
+
+// Initial preview
+updatePreview();
+</script>
+{% endblock %}

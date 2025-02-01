@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="theme-toggle">
+        <a href="{{ url_for('customize_theme') }}" class="theme-button">
+            <span class="emoji">🎨</span>
+            <span class="text">Customize Theme</span>
+        </a>
+    </div>
+
+    <div class="features-grid">
+        <!-- Smart Flashcards -->
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <h3>Smart Flashcards</h3>
+            <p>Create and study with AI-powered flashcards</p>
+            <a href="{{ url_for('flashcards') }}" class="btn">Start</a>
+        </div>
+
+        <!-- Creative Whiteboard (merged Advanced Notes and Sticky Notes) -->
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <h3>Creative Whiteboard</h3>
+            <p>Draw, write, and organize your thoughts with our interactive whiteboard</p>
+            <a href="{{ url_for('whiteboard') }}" class="btn">Start</a>
+        </div>
+
+        <!-- Study Tracker -->
+        <div class="feature-card">
+            <div class="feature-icon">⏱️</div>
+            <h3>Study Tracker</h3>
+            <p>Track your study sessions and stay focused</p>
+            <a href="{{ url_for('study_tracker') }}" class="btn">Start</a>
+        </div>
+
+        <!-- PDF Assistant -->
+        <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h3>PDF Assistant</h3>
+            <p>Extract key information from your PDF documents</p>
+            <a href="{{ url_for('pdf_assistant') }}" class="btn">Start</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+}
+
+.theme-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--button-color);
+    color: var(--button-text-color);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.theme-button:hover {
+    background-color: var(--button-hover-color);
+}
+
+.theme-button .emoji {
+    font-size: 1.2em;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+}
+
+.feature-card p {
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-bottom: 1.5rem;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.8rem 2rem;
+    background-color: var(--button-color);
+    color: var(--button-text-color);
+    border-radius: 25px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: var(--button-hover-color);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,69 @@
+:root {
+    --theme-bg-color: #f4f4f9;
+    --theme-font-family: Arial, sans-serif;
+    --theme-text-color: #333;
+    --theme-primary-color: #0056b3;
+    --theme-link-color: #007bff;
+    --theme-link-hover-color: #005bb5;
+    --theme-button-bg-color: #0056b3;
+    --theme-button-hover-bg-color: #004080;
+}
+
+/* Dark Theme Variables */
+:root.dark-theme {
+    --theme-bg-color: #333;
+    --theme-text-color: #f4f4f9;
+    --theme-primary-color: #28a745;
+    --theme-link-color: #66c7ff;
+    --theme-link-hover-color: #338aff;
+    --theme-button-bg-color: #28a745;
+    --theme-button-hover-bg-color: #218838;
+}
+
+body {
+    background-color: var(--theme-bg-color);
+    font-family: var(--theme-font-family);
+    color: var(--theme-text-color);
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    color: var(--theme-primary-color);
+    margin: 20px 0;
+}
+
+a {
+    color: var(--theme-link-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+a:hover {
+    color: var(--theme-link-hover-color);
+    text-decoration: underline;
+}
+
+input[type="text"], textarea {
+    width: 60%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+input[type="submit"] {
+    padding: 10px 20px;
+    background-color: var(--theme-button-bg-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: var(--theme-button-hover-bg-color);
+}

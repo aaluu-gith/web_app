@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Notes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .sticky-note {
+            background-color: var(--theme-color);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: absolute;
+            overflow: hidden;
+            resize: both;
+            width: 200px;
+            height: 200px;
+        }
+        .sticky-note textarea {
+            width: 100%;
+            height: calc(100% - 30px);
+            border: none;
+            resize: none;
+            background: transparent;
+            font-family: var(--theme-font);
+            font-size: var(--theme-size);
+            color: var(--theme-text);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--theme-btn);
+            color: var(--theme-btn-text);
+            border: none;
+            padding: 5px;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: var(--theme-btn-hover);
+        }
+        .add-btn {
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: var(--theme-btn);
+            color: var(--theme-btn-text);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .add-btn:hover {
+            background-color: var(--theme-btn-hover);
+        }
+        .back-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: var(--theme-btn);
+            color: var(--theme-btn-text);
+            border: none;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .back-btn:hover {
+            background-color: var(--theme-btn-hover);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sticky Notes</h1>
+        <button class="add-btn" onclick="addNote()">Add Note</button>
+        <div id="notes-container"></div>
+        <button class="back-btn" onclick="window.location.href='/'">Back to Main Menu</button>
+    </div>
+
+    <script>
+        const notesContainer = document.getElementById('notes-container');
+
+        // Load notes from local storage
+        window.onload = () => {
+            const savedNotes = JSON.parse(localStorage.getItem('stickyNotes')) || [];
+            savedNotes.forEach(note => createNoteElement(note.id, note.content, note.x, note.y, note.width, note.height));
+        };
+
+        // Save notes to local storage
+        const saveNotes = () => {
+            const notes = Array.from(document.querySelectorAll('.sticky-note')).map(note => ({
+                id: note.id,
+                content: note.querySelector('textarea').value,
+                x: note.style.left,
+                y: note.style.top,
+                width: note.style.width,
+                height: note.style.height,
+            }));
+            localStorage.setItem('stickyNotes', JSON.stringify(notes));
+        };
+
+        // Add a new note
+        const addNote = () => {
+            const id = `note${Date.now()}`;
+            createNoteElement(id, 'New Note', '100px', '100px', '200px', '200px');
+            saveNotes();
+        };
+
+        // Create a note element
+        const createNoteElement = (id, content, x, y, width, height) => {
+            const note = document.createElement('div');
+            note.className = 'sticky-note';
+            note.id = id;
+            note.style.left = x;
+            note.style.top = y;
+            note.style.width = width;
+            note.style.height = height;
+
+            note.innerHTML = `
+                <textarea>${content}</textarea>
+                <button class="delete-btn" onclick="deleteNote('${id}')">X</button>
+            `;
+
+            // Enable dragging
+            note.onmousedown = e => {
+                let shiftX = e.clientX - note.getBoundingClientRect().left;
+                let shiftY = e.clientY - note.getBoundingClientRect().top;
+
+                const moveAt = (pageX, pageY) => {
+                    note.style.left = pageX - shiftX + 'px';
+                    note.style.top = pageY - shiftY + 'px';
+                };
+
+                const onMouseMove = e => {
+                    moveAt(e.pageX, e.pageY);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+
+                note.onmouseup = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    note.onmouseup = null;
+                    saveNotes();
+                };
+            };
+
+            note.ondragstart = () => false;
+
+            notesContainer.appendChild(note);
+        };
+
+        // Delete a note
+        const deleteNote = id => {
+            document.getElementById(id).remove();
+            saveNotes();
+        };
+    </script>    
+        <script src="/static/js/theme.js"></script>
+</body>
+</html>

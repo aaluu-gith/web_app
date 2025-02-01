@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Analysis Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: var(--theme-color);
+            border-bottom: 2px solid var(--theme-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .question {
+            font-weight: bold;
+            color: var(--theme-color);
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .download-btn {
+            background-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Analysis Results</h1>
+
+        {% if summary %}
+        <div class="section">
+            <h2>Key Points Summary</h2>
+            <ul>
+                {% for point in summary %}
+                <li>{{ point }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if questions %}
+        <div class="section">
+            <h2>Important Questions</h2>
+            <ul>
+                {% for question in questions %}
+                <li>
+                    <span class="question">Q{{ loop.index }}:</span> {{ question }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="button-group">
+            <button onclick="window.print()" class="download-btn">Download Results</button>
+            <a href="/pdf_summary" class="btn">Process Another PDF</a>
+            <a href="/" class="btn">Back to Home</a>
+        </div>
+    </div>
+    <script src="/static/js/theme.js"></script>
+</body>
+</html>

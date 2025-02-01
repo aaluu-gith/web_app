@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Notes & Whiteboard{% endblock %}
+
+{% block additional_styles %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f3f3f3;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .container {
+        width: 90%;
+        max-width: 1200px;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .toolbar {
+        background-color: var(--theme-color);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+    }
+
+    .toolbar div {
+        display: flex;
+        gap: 10px;
+    }
+
+    .toolbar button, .toolbar select, .toolbar input[type="color"] {
+        padding: 8px;
+        font-size: 14px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        background-color: #ffffff;
+        color: var(--theme-color);
+        transition: 0.3s;
+    }
+
+    .toolbar button:hover {
+        background-color: var(--theme-btn-hover);
+        color: white;
+    }
+
+    .canvas-container {
+        position: relative;
+        flex-grow: 1;
+        overflow: hidden;
+        cursor: crosshair;
+    }
+
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .note {
+        position: absolute;
+        padding: 8px;
+        background-color: yellow;
+        border: 1px solid black;
+        border-radius: 4px;
+        cursor: move;
+    }
+
+    .note textarea {
+        background: transparent;
+        border: none;
+        resize: none;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="toolbar">
+        <div>
+            <button onclick="activateTool('pen')">Pen</button>
+            <button onclick="activateTool('eraser')">Eraser</button>
+            <select id="brush-size" onchange="changeBrushSize()">
+                <option value="2">Small</option>
+                <option value="5" selected>Medium</option>
+                <option value="10">Large</option>
+            </select>
+            <input type="color" id="color-picker" onchange="changeColor()" value="#000000">
+            <button onclick="addNote()">Add Note</button>
+        </div>
+        <div>
+            <button onclick="undo()">Undo</button>
+            <button onclick="redo()">Redo</button>
+            <button onclick="clearCanvas()">Clear</button>
+            <button onclick="saveCanvas()">Save</button>
+        </div>
+    </div>
+    <div class="canvas-container" id="canvas-container">
+        <canvas id="drawingCanvas"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvas-container');
+
+    let isDrawing = false;
+    let tool = 'pen';
+    let brushSize = 5;
+    let color = '#000000';
+    let history = [];
+    let redoHistory = [];
+
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+
+    window.addEventListener('resize', () => {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+        ctx.putImageData(imgData, 0, 0);
+    });
+
+    function activateTool(selectedTool) {
+        tool = selectedTool;
+        canvas.style.cursor = tool === 'pen' || tool === 'eraser' ? 'crosshair' : 'default';
+    }
+
+    function changeBrushSize() {
+        brushSize = document.getElementById('brush-size').value;
+    }
+
+    function changeColor() {
+        color = document.getElementById('color-picker').value;
+    }
+
+    function saveState() {
+        history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        redoHistory = [];
+    }
+
+    function undo() {
+        if (history.length > 0) {
+            redoHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            const lastState = history.pop();
+            ctx.putImageData(lastState, 0, 0);
+        }
+    }
+
+    function redo() {
+        if (redoHistory.length > 0) {
+            history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            const nextState = redoHistory.pop();
+            ctx.putImageData(nextState, 0, 0);
+        }
+    }
+
+    function clearCanvas() {
+        saveState();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function saveCanvas() {
+        const link = document.createElement('a');
+        link.download = 'whiteboard.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        saveState();
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        if (tool === 'pen') {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = brushSize;
+            ctx.lineCap = 'round';
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        } else if (tool === 'eraser') {
+            ctx.clearRect(e.offsetX - brushSize / 2, e.offsetY - brushSize / 2, brushSize, brushSize);
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        isDrawing = false;
+        ctx.closePath();
+    });
+
+    function addNote() {
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.style.left = '50px';
+        note.style.top = '50px';
+        note.innerHTML = `<textarea></textarea>`;
+        note.draggable = true;
+        note.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', null);
+            const rect = note.getBoundingClientRect();
+            note.offsetX = e.clientX - rect.left;
+            note.offsetY = e.clientY - rect.top;
+        };
+        note.ondragend = (e) => {
+            note.style.left = `${e.clientX - note.offsetX}px`;
+            note.style.top = `${e.clientY - note.offsetY}px`;
+        };
+        container.appendChild(note);
+    }
+</script>
+{% endblock %}

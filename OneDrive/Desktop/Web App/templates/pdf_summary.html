@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block title %}PDF Assistant{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .pdf-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .upload-zone {
+        border: 3px dashed var(--button-color);
+        border-radius: 20px;
+        padding: 3rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    .upload-zone.drag-over {
+        background: rgba(var(--button-color-rgb), 0.1);
+        transform: scale(1.02);
+    }
+
+    .upload-icon {
+        font-size: 4rem;
+        color: var(--button-color);
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    .file-input {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .options-container {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 15px;
+        border: 1px solid rgba(var(--button-color-rgb), 0.2);
+    }
+
+    .option-group {
+        margin-bottom: 1rem;
+    }
+
+    .option-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .option-input {
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px solid rgba(var(--button-color-rgb), 0.2);
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+
+    .option-input:focus {
+        outline: none;
+        border-color: var(--button-color);
+    }
+
+    .process-button {
+        width: 100%;
+        padding: 1rem;
+        background-color: var(--button-color);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+        margin-top: 1rem;
+    }
+
+    .process-button:hover {
+        transform: scale(1.02);
+    }
+
+    .process-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .loading-content {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid var(--button-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+        color: #666;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .loading-progress {
+        width: 100%;
+        height: 10px;
+        background: #f3f3f3;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+
+    .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: var(--button-color);
+        border-radius: 5px;
+        transition: width 0.3s;
+    }
+
+    .result-container {
+        display: none;
+        margin-top: 2rem;
+        padding: 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .error-message {
+        color: #dc3545;
+        background: #ffe6e6;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+        display: none;
+    }
+
+    .success-message {
+        color: #28a745;
+        background: #e6ffe6;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pdf-container">
+    <div class="upload-zone" id="uploadZone">
+        <span class="upload-icon">📄</span>
+        <p class="upload-text">Drag and drop your PDF here or click to browse</p>
+        <input type="file" class="file-input" id="pdfFile" accept=".pdf">
+    </div>
+
+    <div class="options-container">
+        <div class="option-group">
+            <label class="option-label" for="summaryLength">Summary Length (0.1 - 1.0)</label>
+            <input type="range" class="option-input" id="summaryLength" min="0.1" max="1.0" step="0.1" value="0.3">
+            <span id="summaryLengthValue">0.3</span>
+        </div>
+
+        <div class="option-group">
+            <label class="option-label">
+                <input type="checkbox" id="extractQuestions"> Generate Study Questions
+            </label>
+        </div>
+
+        <button class="process-button" id="processButton" disabled>
+            Process PDF
+        </button>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+    <div class="success-message" id="successMessage"></div>
+    <div class="result-container" id="resultContainer">
+        <h2>Summary Points</h2>
+        <ul id="summaryPointsList"></ul>
+        <h2>Questions</h2>
+        <ul id="questionsList"></ul>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p class="loading-text" id="loadingText">Processing your PDF...</p>
+        <div class="loading-progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const fileInput = document.getElementById('pdfFile');
+    const uploadZone = document.getElementById('uploadZone');
+    const processButton = document.getElementById('processButton');
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    const progressBar = document.querySelector('.progress-bar');
+    const resultContainer = document.querySelector('.result-container');
+    const errorMessage = document.querySelector('.error-message');
+    const successMessage = document.querySelector('.success-message');
+    const summaryPointsList = document.getElementById('summaryPointsList');
+    const questionsList = document.getElementById('questionsList');
+
+    // Drag and drop functionality
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        uploadZone.classList.add('drag-over');
+    }
+
+    function unhighlight() {
+        uploadZone.classList.remove('drag-over');
+    }
+
+    uploadZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length === 0) return;
+        
+        const file = files[0];
+        
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            showError('Please upload a valid PDF file');
+            return;
+        }
+        
+        // Validate file size (50MB limit)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+            showError('File is too large. Maximum size is 50MB');
+            return;
+        }
+        
+        // Update UI to show selected file
+        document.querySelector('.upload-text').textContent = file.name;
+        processButton.disabled = false;
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+        processButton.disabled = true;
+        fileInput.value = ''; // Clear file input
+    }
+
+    function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.style.display = 'block';
+        errorMessage.style.display = 'none';
+    }
+
+    function updateProgress(progress) {
+        progressBar.style.width = `${progress}%`;
+    }
+
+    function startProgressSimulation() {
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            updateProgress(progress);
+            if (progress >= 100) {
+                clearInterval(interval);
+            }
+        }, 500);
+    }
+
+    processButton.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) {
+            showError('Please select a PDF file');
+            return;
+        }
+
+        // Reset previous results
+        resultContainer.style.display = 'none';
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+        summaryPointsList.innerHTML = '';
+        questionsList.innerHTML = '';
+
+        // Show loading overlay
+        loadingOverlay.style.display = 'flex';
+        processButton.disabled = true;
+        startProgressSimulation();
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/process_pdf', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            // Hide loading overlay
+            loadingOverlay.style.display = 'none';
+
+            if (result.status === 200) {
+                // Populate summary points
+                result.summary_points.forEach(point => {
+                    const li = document.createElement('li');
+                    li.textContent = point;
+                    summaryPointsList.appendChild(li);
+                });
+
+                // Populate questions
+                result.questions.forEach(question => {
+                    const li = document.createElement('li');
+                    li.textContent = question;
+                    questionsList.appendChild(li);
+                });
+
+                // Show result container
+                resultContainer.style.display = 'block';
+                showSuccess(`Successfully processed ${result.file_name}`);
+            } else {
+                showError(result.details || 'An unexpected error occurred');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            loadingOverlay.style.display = 'none';
+            showError('Network error. Please try again.');
+        } finally {
+            processButton.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

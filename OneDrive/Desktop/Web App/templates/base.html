@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Study Assistant{% endblock %}</title>
+    
+    <style>
+        :root {
+            --banner-color: {{ theme_data.banner_color or '#FFB6C1' }};
+            --background-color: {{ theme_data.background_color or '#FFF5F5' }};
+            --button-color: {{ theme_data.button_color or '#FF69B4' }};
+            --text-color: {{ theme_data.text_color or '#333' }};
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .top-banner {
+            background-color: var(--banner-color);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .top-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg, 
+                rgba(255,255,255,0.1), 
+                rgba(255,255,255,0.05)
+            );
+            transform: rotate(-45deg);
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: transform 0.3s ease;
+        }
+
+        .app-title:hover {
+            transform: scale(1.05);
+        }
+
+        .app-title span {
+            margin-left: 10px;
+        }
+
+        .theme-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .theme-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .theme-button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .back-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--button-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .top-banner {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .app-title {
+                width: 100%;
+                text-align: center;
+                margin-top: 1rem;
+            }
+        }
+    </style>
+
+    {% block additional_styles %}{% endblock %}
+</head>
+<body>
+    <div class="top-banner">
+        <a href="index.html" class="app-title">
+            <span>🌸 Study Assistant</span>
+        </a>
+        <div class="theme-controls">
+            <button class="theme-button" onclick="toggleTheme()">
+                🎨 Change Theme
+            </button>
+        </div>
+    </div>
+
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% if request.endpoint != 'index' %}
+    <a href="{{ url_for('index') }}" class="back-button">🏠 Back to Home</a>
+    {% endif %}
+
+    <script>
+        function toggleTheme() {
+            fetch("{{ url_for('save_theme') }}", {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.documentElement.style.setProperty('--banner-color', data.banner_color);
+                document.documentElement.style.setProperty('--background-color', data.background_color);
+                document.documentElement.style.setProperty('--button-color', data.button_color);
+                document.documentElement.style.setProperty('--text-color', data.text_color);
+            })
+            .catch(error => console.error('Theme toggle error:', error));
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

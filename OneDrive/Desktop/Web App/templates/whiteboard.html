@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="whiteboard-container">
+    <div class="toolbar">
+        <button class="tool-btn" data-tool="pencil" title="Pencil">✏️</button>
+        <button class="tool-btn" data-tool="eraser" title="Eraser">🧽</button>
+        <button class="tool-btn" data-tool="line" title="Line">➖</button>
+        <button class="tool-btn" data-tool="rectangle" title="Rectangle">🔲</button>
+        <button class="tool-btn" data-tool="circle" title="Circle">⭕</button>
+        <button class="tool-btn" data-tool="text" title="Text">🔤</button>
+        
+        <input type="color" id="colorPicker" value="#000000" title="Color">
+        <input type="range" class="size-picker" min="1" max="20" value="5" title="Brush Size">
+        
+        <button class="action-btn" id="clearBtn" title="Clear Canvas">🗑</button>
+        <button class="action-btn" id="undoBtn" title="Undo">↩️</button>
+        <button class="action-btn" id="redoBtn" title="Redo">↪️</button>
+        <button class="action-btn" id="saveBtn" title="Save">💾</button>
+    </div>
+    <canvas id="whiteboard"></canvas>
+    <input type="text" class="text-input" placeholder="Type text here" style="display:none;">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+class WhiteboardTool {
+    constructor() {
+        this.canvas = document.getElementById('whiteboard');
+        this.ctx = this.canvas.getContext('2d');
+        this.textInput = document.querySelector('.text-input');
+        
+        // Canvas setup
+        this.setupCanvas();
+        
+        // Drawing state
+        this.isDrawing = false;
+        this.currentTool = 'pencil';
+        this.color = '#000000';
+        this.size = 5;
+        this.startX = 0;
+        this.startY = 0;
+        
+        // Drawing history
+        this.drawingHistory = [];
+        this.undoStack = [];
+        this.redoStack = [];
+        
+        // Event listeners
+        this.setupEventListeners();
+        this.setupToolControls();
+        
+        // Save initial state
+        this.saveState();
+    }
+    
+    setupCanvas() {
+        const container = this.canvas.parentElement;
+        this.canvas.width = container.clientWidth - 40;
+        this.canvas.height = container.clientHeight - 80;
+        
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+    }
+    
+    setupEventListeners() {
+        this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
+        this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
+        this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
+        this.canvas.addEventListener('mouseout', this.onMouseUp.bind(this));
+        
+        // Text input handling
+        this.textInput.addEventListener('blur', () => {
+            if (this.textInput.value) {
+                this.ctx.font = `${this.size * 3}px Arial`;
+                this.ctx.fillStyle = this.color;
+                this.ctx.fillText(this.textInput.value, this.startX, this.startY);
+                this.saveState();
+            }
+            this.textInput.style.display = 'none';
+            this.textInput.value = '';
+        });
+    }
+    
+    setupToolControls() {
+        // Tool selection
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTool = btn.dataset.tool;
+                
+                if (this.currentTool === 'text') {
+                    this.textInput.style.display = 'block';
+                    this.textInput.focus();
+                } else {
+                    this.textInput.style.display = 'none';
+                }
+            });
+        });
+        
+        // Color picker
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            this.color = e.target.value;
+        });
+        
+        // Size picker
+        document.querySelector('.size-picker').addEventListener('input', (e) => {
+            this.size = parseInt(e.target.value);
+        });
+        
+        // Action buttons
+        document.getElementById('clearBtn').addEventListener('click', () => this.clearCanvas());
+        document.getElementById('undoBtn').addEventListener('click', () => this.undo());
+        document.getElementById('redoBtn').addEventListener('click', () => this.redo());
+        document.getElementById('saveBtn').addEventListener('click', () => this.saveAndExport());
+    }
+    
+    onMouseDown(e) {
+        this.isDrawing = true;
+        const rect = this.canvas.getBoundingClientRect();
+        this.startX = e.clientX - rect.left;
+        this.startY = e.clientY - rect.top;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+        
+        // Prepare drawing context
+        if (this.currentTool === 'pencil') {
+            this.ctx.strokeStyle = this.color;
+            this.ctx.lineWidth = this.size;
+            
+            // Create a new drawing element for pencil
+            this.currentDrawing = {
+                tool: 'pencil',
+                points: [{ x: this.startX, y: this.startY }],
+                color: this.color,
+                size: this.size
+            };
+        } else if (this.currentTool === 'eraser') {
+            this.ctx.strokeStyle = 'white';
+            this.ctx.lineWidth = this.size * 2;
+            
+            // Create a new drawing element for eraser
+            this.currentDrawing = {
+                tool: 'eraser',
+                points: [{ x: this.startX, y: this.startY }],
+                color: 'white',
+                size: this.size * 2
+            };
+        }
+    }
+    
+    onMouseMove(e) {
+        if (!this.isDrawing) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        switch(this.currentTool) {
+            case 'pencil':
+            case 'eraser':
+                this.ctx.lineTo(x, y);
+                this.ctx.stroke();
+                
+                // Add point to current drawing
+                if (this.currentDrawing) {
+                    this.currentDrawing.points.push({ x, y });
+                }
+                break;
+            case 'line':
+                this.redrawAllElements();
+                this.drawTemporaryLine(x, y);
+                break;
+            case 'rectangle':
+                this.redrawAllElements();
+                this.drawTemporaryRectangle(x, y);
+                break;
+            case 'circle':
+                this.redrawAllElements();
+                this.drawTemporaryCircle(x, y);
+                break;
+        }
+    }
+    
+    onMouseUp(e) {
+        if (!this.isDrawing) return;
+        
+        this.isDrawing = false;
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Add the current drawing to history if it exists
+        if (this.currentTool === 'pencil' || this.currentTool === 'eraser') {
+            if (this.currentDrawing && this.currentDrawing.points.length > 1) {
+                this.drawingHistory.push(this.currentDrawing);
+                this.currentDrawing = null;
+            }
+        }
+        
+        // Store shape elements
+        if (this.currentTool === 'line' || this.currentTool === 'rectangle' || this.currentTool === 'circle') {
+            const shapeElement = {
+                tool: this.currentTool,
+                startX: this.startX,
+                startY: this.startY,
+                endX: x,
+                endY: y,
+                color: this.color,
+                size: this.size
+            };
+            this.drawingHistory.push(shapeElement);
+        }
+        
+        // Redraw all elements to ensure clean rendering
+        this.redrawAllElements();
+        
+        // Save state for undo/redo
+        this.saveState();
+    }
+    
+    redrawAllElements() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Redraw all stored elements
+        this.drawingHistory.forEach(element => {
+            this.ctx.beginPath();
+            this.ctx.strokeStyle = element.color;
+            this.ctx.lineWidth = element.size;
+            
+            switch(element.tool) {
+                case 'pencil':
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(element.points[0].x, element.points[0].y);
+                    element.points.slice(1).forEach(point => {
+                        this.ctx.lineTo(point.x, point.y);
+                    });
+                    this.ctx.stroke();
+                    break;
+                case 'eraser':
+                    this.ctx.globalCompositeOperation = 'destination-out';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(element.points[0].x, element.points[0].y);
+                    element.points.slice(1).forEach(point => {
+                        this.ctx.lineTo(point.x, point.y);
+                    });
+                    this.ctx.stroke();
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    break;
+                case 'line':
+                    this.ctx.moveTo(element.startX, element.startY);
+                    this.ctx.lineTo(element.endX, element.endY);
+                    this.ctx.stroke();
+                    break;
+                case 'rectangle':
+                    this.ctx.rect(
+                        element.startX, 
+                        element.startY, 
+                        element.endX - element.startX, 
+                        element.endY - element.startY
+                    );
+                    this.ctx.stroke();
+                    break;
+                case 'circle':
+                    const radius = Math.sqrt(
+                        Math.pow(element.endX - element.startX, 2) + 
+                        Math.pow(element.endY - element.startY, 2)
+                    );
+                    this.ctx.arc(element.startX, element.startY, radius, 0, 2 * Math.PI);
+                    this.ctx.stroke();
+                    break;
+            }
+        });
+    }
+    
+    drawTemporaryLine(x, y) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+        this.ctx.lineTo(x, y);
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.size;
+        this.ctx.stroke();
+    }
+    
+    drawTemporaryRectangle(x, y) {
+        this.ctx.beginPath();
+        this.ctx.rect(
+            this.startX, 
+            this.startY, 
+            x - this.startX, 
+            y - this.startY
+        );
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.size;
+        this.ctx.stroke();
+    }
+    
+    drawTemporaryCircle(x, y) {
+        const radius = Math.sqrt(
+            Math.pow(x - this.startX, 2) + 
+            Math.pow(y - this.startY, 2)
+        );
+        
+        this.ctx.beginPath();
+        this.ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.size;
+        this.ctx.stroke();
+    }
+    
+    saveState() {
+        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        this.undoStack.push(imageData);
+        this.redoStack = []; // Clear redo stack
+    }
+    
+    undo() {
+        if (this.undoStack.length > 1) {
+            this.redoStack.push(this.undoStack.pop());
+            const previousState = this.undoStack[this.undoStack.length - 1];
+            this.ctx.putImageData(previousState, 0, 0);
+            
+            // Remove last drawing history
+            this.drawingHistory.pop();
+        }
+    }
+    
+    redo() {
+        if (this.redoStack.length > 0) {
+            const nextState = this.redoStack.pop();
+            this.undoStack.push(nextState);
+            this.ctx.putImageData(nextState, 0, 0);
+            
+            // Restore last drawing
+            if (this.redoStack.length > 0) {
+                this.drawingHistory.push(this.drawingHistory[this.drawingHistory.length - 1]);
+            }
+        }
+    }
+    
+    clearCanvas() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.drawingHistory = [];
+        this.undoStack = [];
+        this.redoStack = [];
+        this.saveState();
+    }
+    
+    saveAndExport() {
+        const image = this.canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `whiteboard_${new Date().toISOString()}.png`;
+        link.href = image;
+        link.click();
+    }
+}
+
+// Initialize whiteboard on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const whiteboard = new WhiteboardTool();
+    
+    // Set pencil as default active tool
+    document.querySelector('.tool-btn[data-tool="pencil"]').classList.add('active');
+});
+</script>
+{% endblock %}
+
+{% block additional_styles %}
+<style>
+.whiteboard-container {
+    width: 100%;
+    height: calc(100vh - 100px);
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#whiteboard {
+    flex: 1;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    cursor: crosshair;
+    max-width: 100%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.tool-btn, 
+.action-btn {
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+}
+
+.tool-btn:hover, 
+.action-btn:hover {
+    opacity: 0.8;
+}
+
+.tool-btn.active {
+    border: 2px solid white;
+    transform: scale(1.1);
+}
+
+.size-picker {
+    width: 100px;
+    height: 10px;
+}
+
+#colorPicker {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.text-input {
+    position: absolute;
+    z-index: 1000;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
